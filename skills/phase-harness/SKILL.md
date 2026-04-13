@@ -224,9 +224,57 @@ definitions unless your environment prefers that.
 
 ---
 
-## Step 0: Suitability Check (quick triage)
+## Step 0a: Resume Check (before anything else)
 
-Before launching the Operator, the Dispatcher does a brief self-check:
+When phase-harness is invoked, the Dispatcher first checks whether a run
+is already in progress in the current directory. A run may have been
+interrupted by context compaction, session end, or an earlier pause.
+
+1. Check `.harness/phase-status.json`
+   - If it does not exist → no prior run. Skip to Step 0b.
+2. Read `phase-status.json` → determine the `current_phase` (first phase
+   with `status != "complete"`, or the last phase if all complete).
+3. Check `.harness/compaction-breadcrumbs.jsonl`
+   - If it exists, read the last JSONL entry for fine-grained context
+     (progress_tail, uncommitted_files, session_id at compaction time).
+4. Present a compact summary to the user. Use the breadcrumb when available
+   — it gives detail the status.json alone does not:
+
+   ```
+   Prior phase-harness run detected:
+
+   Feature: {status.feature}
+   Progress: Phase {current.id} / {total} — {current.name} ({current.status}, attempts={current.attempts})
+   {if breadcrumb}
+     Last known activity (from compaction breadcrumb at {breadcrumb.ts}):
+     - {progress_tail last 3 items, one per line}
+     Uncommitted files: {count}  (or "none")
+   {endif}
+
+   How would you like to proceed?
+   1. Resume — continue from Phase {current.id} {current.status}
+   2. Archive + new — stash current run to .harness/archive/ and start fresh with a new feature request
+   3. Cancel — do nothing, investigate manually
+   ```
+
+5. Branching:
+   - **Resume**: skip Step 0b, Step 1, Step 2. Jump directly into the
+     Step 3 loop at `current_phase`. If the phase was mid-Generator
+     attempt (no eval-report for this attempt), continue by spawning
+     Generator again with the existing spec and, if applicable, the
+     last eval-report's Issues as `{REWORK_FEEDBACK}`.
+   - **Archive + new**: run the archive move (Step 5 mechanics) and
+     then proceed to Step 0b with the user's new feature request.
+   - **Cancel**: end the invocation; let the user inspect files by hand.
+
+If `.harness/phase-status.json` exists but is malformed, surface the
+error to the user and offer Archive + new or Cancel (do not attempt
+automatic repair).
+
+## Step 0b: Suitability Check (quick triage)
+
+Before launching the Operator for a fresh run, the Dispatcher does a
+brief self-check:
 
 ```
 Is phase-harness actually the right tool?
@@ -714,6 +762,10 @@ phase-{N}/ dirs) for future reference.
   patterns.md                    # Accumulated Codebase Patterns
                                  # (Evaluator append, periodic distill)
   plan-review-{N}.md             # Plan review checkpoints (optional)
+  compaction-breadcrumbs.jsonl   # Optional. Appended by an external
+                                 # PostCompact hook when context compacts
+                                 # mid-run. Read by Step 0a Resume Check
+                                 # to restore fine-grained context.
   phase-1/
     spec.md                      # Operator output
     generator-report.md          # Generator output (successful)
