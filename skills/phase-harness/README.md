@@ -9,6 +9,62 @@ a single run without exhausting the context window.
 
 See [SKILL.md](SKILL.md) for the full specification.
 
+## Architecture
+
+```mermaid
+flowchart TD
+    User([User]) -->|feature request| Dispatcher
+    Dispatcher{{"Dispatcher<br/>(main session)"}}
+    Dispatcher <-->|read/write| Status[(phase-status.json)]
+    Dispatcher <-->|append/read| Patterns[(patterns.md)]
+
+    subgraph Phase1["Phase 1 — sequential within phase"]
+        direction LR
+        Op1[["Operator<br/>(opus)"]] -->|spec.md| Gen1[["Generator<br/>(sonnet/opus)"]]
+        Gen1 -->|report + progress.jsonl| Ev1[["Evaluator(s)<br/>(sonnet)"]]
+        Ev1 -->|eval-report.md<br/>PASS/FAIL| Gate1{{Gate}}
+    end
+
+    subgraph Phase2["Phase 2 — parallel when Depends allow"]
+        direction LR
+        Op2[["Operator"]] --> Gen2[["Generator"]] --> Ev2[["Evaluator(s)"]] --> Gate2{{Gate}}
+    end
+
+    subgraph Phase3["Phase 3"]
+        direction LR
+        Op3[["Operator"]] --> Gen3[["Generator"]] --> Ev3[["Evaluator(s)"]] --> Gate3{{Gate}}
+    end
+
+    Dispatcher -->|spawn subagents| Phase1
+    Gate1 -->|PASS: git commit| Dispatcher
+    Dispatcher -.->|DAG: parallel if no deps| Phase2
+    Dispatcher -.->|DAG: parallel if no deps| Phase3
+    Gate2 -->|PASS| Dispatcher
+    Gate3 -->|PASS| Dispatcher
+
+    Dispatcher -->|all phases PASS| Final[Final integration<br/>build + test]
+    Final --> Archive[(archive/)]
+
+    classDef dispatcher fill:#1f6feb,color:#fff,stroke:#0b4fc7
+    classDef subagent fill:#2da44e,color:#fff,stroke:#216e39
+    classDef evaluator fill:#bf8700,color:#fff,stroke:#7d5900
+    classDef file fill:#fafbfc,stroke:#57606a,color:#24292f
+    classDef gate fill:#cf222e,color:#fff,stroke:#82071e
+
+    class Dispatcher dispatcher
+    class Op1,Op2,Op3,Gen1,Gen2,Gen3 subagent
+    class Ev1,Ev2,Ev3 evaluator
+    class Status,Patterns,Archive file
+    class Gate1,Gate2,Gate3 gate
+```
+
+The **Dispatcher** (main session) never reads source code. It only
+reads `phase-status.json` and the *verdict* line of eval reports.
+Every role (Operator, Generator, Evaluator) runs as a fresh
+**subagent** with isolated context. Phases whose `Depends` lists are
+satisfied run in parallel; within a phase the three roles run
+sequentially through a verification gate.
+
 ## When to use
 
 - Feature spans 3+ distinct implementation steps
