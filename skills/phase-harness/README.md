@@ -143,7 +143,7 @@ During a harness run, the Dispatcher recognizes:
 - `status phase-harness` — progress summary from status.json + progress.jsonl
 - `pause phase-harness` — stop before the next phase
 - `resume phase-harness` — continue from a pause
-- `archive phase-harness` — move completed run to `.claude/harness/archive/`
+- `archive phase-harness` — move completed run to `.harness/archive/`
 - `help phase-harness` — state-aware guidance
 
 ## License

@@ -174,7 +174,7 @@ into the Evaluator prompt:
 
 ### Required
 - Claude Code or compatible agent with subagent (Task/Agent) support
-- A writable `.claude/harness/` directory in the project
+- A writable `.harness/` directory in the project
 - Git (for per-phase commits)
 - An executable build/test toolchain
 
@@ -190,8 +190,8 @@ into the Evaluator prompt:
 ### Gitignore (recommended)
 Add to `.gitignore`:
 ```
-.claude/harness/
-!.claude/harness/archive/
+.harness/
+!.harness/archive/
 ```
 (Archive directory kept under VCS for historical reference if desired.)
 
@@ -215,7 +215,7 @@ The Dispatcher recognizes these user messages during a harness run:
 | `pause phase-harness` / `/phase-harness-pause` | Set `paused: true` in phase-status.json. Dispatcher waits after the current subagent returns and does not advance to the next phase. |
 | `resume phase-harness` / `/phase-harness-resume` | Clear `paused: true` and continue. |
 | `status phase-harness` / `/phase-harness-status` | Dispatcher reads phase-status.json and any `phase-{N}/progress.jsonl` tails, returns a concise progress summary to the user. |
-| `archive phase-harness` / `/phase-harness-archive` | Move current `.claude/harness/` contents (except `archive/`) to `.claude/harness/archive/{YYYY-MM-DD}-{feature-slug}/`. Used at hand completion or before starting a new feature. |
+| `archive phase-harness` / `/phase-harness-archive` | Move current `.harness/` contents (except `archive/`) to `.harness/archive/{YYYY-MM-DD}-{feature-slug}/`. Used at hand completion or before starting a new feature. |
 | `help phase-harness` / `/phase-harness-help` | Dispatcher renders state-aware guidance (current phase, next steps, common options). |
 
 These are documented behaviors — the Dispatcher interprets them without
@@ -280,7 +280,7 @@ phase-plan-v2.md with a revised plan based on what it finds. Skip Phase 0
 when the feature is well-understood.
 
 ## Output
-Write `.claude/harness/phase-plan.md` with this structure:
+Write `.harness/phase-plan.md` with this structure:
 
 # Phase Plan: {FEATURE_NAME}
 
@@ -342,7 +342,7 @@ approval before proceeding.
 
 ## Step 2: State Initialization
 
-The Dispatcher creates `.claude/harness/phase-status.json`:
+The Dispatcher creates `.harness/phase-status.json`:
 
 ```json
 {
@@ -408,12 +408,12 @@ Analyze prior phase results and write a concrete execution specification
 for Phase {N}.
 
 ## Files to read (in order)
-1. `.claude/harness/patterns.md` — accumulated Codebase Patterns. Read
+1. `.harness/patterns.md` — accumulated Codebase Patterns. Read
    FIRST. Extract only items RELEVANT to Phase {N}; do not copy the
    whole file into the spec — summarize/cite the relevant subset.
-2. `.claude/harness/phase-plan.md` — Phase {N} section
-3. `.claude/harness/phase-{dep}/eval-report.md` for each dep in Depends
-4. `.claude/harness/phase-{dep}/generator-report.md` for each dep
+2. `.harness/phase-plan.md` — Phase {N} section
+3. `.harness/phase-{dep}/eval-report.md` for each dep in Depends
+4. `.harness/phase-{dep}/generator-report.md` for each dep
 5. Source files produced/modified by depended phases (from Outputs) and
    any CLAUDE.md in those directories
 
@@ -423,7 +423,7 @@ files and make your best judgment. You do not have access to the
 main-session conversation.
 
 ## Output
-Write `.claude/harness/phase-{N}/spec.md`:
+Write `.harness/phase-{N}/spec.md`:
 
 # Phase {N} Specification: {PHASE_NAME}
 
@@ -466,14 +466,14 @@ Agent({
 You are the Phase {N} Generator.
 
 ## Specification
-Read `.claude/harness/phase-{N}/spec.md` and implement accordingly.
+Read `.harness/phase-{N}/spec.md` and implement accordingly.
 
 ## Domain self-check (first step)
 Phase {N}'s declared Domain is: {Domain}
 Read spec.md and confirm this work fits your domain expertise. If it
 does not (e.g., you are python-pro but the spec asks for Rust):
   1. Stop implementation
-  2. Write `.claude/harness/phase-{N}/generator-report.md` with a single
+  2. Write `.harness/phase-{N}/generator-report.md` with a single
      line: `domain_mismatch: true` and a brief reason
   3. Exit
 
@@ -482,7 +482,7 @@ Do NOT ask the user questions. Note ambiguities in the generator report
 for the Evaluator.
 
 ## Progress streaming
-Append one line to `.claude/harness/phase-{N}/progress.jsonl` at each
+Append one line to `.harness/phase-{N}/progress.jsonl` at each
 major milestone using the format:
 {"ts": "<ISO-8601>", "step": "<short label>", "status": "started|done|blocked"}
 Examples of milestones: "read spec", "implement module X", "run tests",
@@ -496,7 +496,7 @@ the user on demand.
 4. Run each Acceptance Criterion's verify command and confirm PASS
 5. Fix and re-run until all PASS
 6. Do NOT violate Constraints
-7. Write `.claude/harness/phase-{N}/generator-report.md`:
+7. Write `.harness/phase-{N}/generator-report.md`:
    - Summary (files created/modified)
    - Acceptance Criteria: PASS/FAIL per item, with verify output
    - Known limitations
@@ -539,10 +539,10 @@ output. Do NOT modify code. Use Read and Bash (execute/inspect only).
 Do NOT ask the user questions.
 
 ## Specification
-Read `.claude/harness/phase-{N}/spec.md`.
+Read `.harness/phase-{N}/spec.md`.
 
 ## Generator Report
-Read `.claude/harness/phase-{N}/generator-report.md`. If it contains
+Read `.harness/phase-{N}/generator-report.md`. If it contains
 `domain_mismatch: true`, record verdict FAIL with that reason and exit.
 
 ## Verification
@@ -557,7 +557,7 @@ Read `.claude/harness/phase-{N}/generator-report.md`. If it contains
 {CHECKLIST_INJECTION}
 
 ## Learning Accumulation (required when verdict is PASS)
-- Append reusable general patterns to `.claude/harness/patterns.md`
+- Append reusable general patterns to `.harness/patterns.md`
   (create with `# Codebase Patterns` header if missing)
 - Append directory-specific patterns to the CLAUDE.md in that directory.
   Do NOT create a new CLAUDE.md; record "CLAUDE.md creation needed:
@@ -568,7 +568,7 @@ Read `.claude/harness/phase-{N}/generator-report.md`. If it contains
   - Not duplicated or contradicted by existing patterns.md entries
 
 ## Output
-Write `.claude/harness/phase-{N}/eval-report-{evaluator_name}.md`
+Write `.harness/phase-{N}/eval-report-{evaluator_name}.md`
 (or `eval-report.md` if only one Evaluator). Structure:
 
 # Phase {N} Evaluation Report ({evaluator_name})
@@ -650,7 +650,7 @@ Dispatcher launches a short Operator subagent:
 Agent({
   description: "Patterns Distillation",
   model: "<per project cost_tier default>",
-  prompt: "Read .claude/harness/patterns.md. Merge duplicates, remove
+  prompt: "Read .harness/patterns.md. Merge duplicates, remove
   phase-specific noise, consolidate related items, keep only general
   reusable conventions. Preserve the `# Codebase Patterns` header.
   Write the refined version back to patterns.md."
@@ -668,10 +668,10 @@ Dispatcher launches a brief Operator review:
 Agent({
   description: "Plan Review Checkpoint",
   model: "opus",
-  prompt: "Read .claude/harness/phase-plan.md and all existing
+  prompt: "Read .harness/phase-plan.md and all existing
   eval-reports. Are the remaining phases still appropriate given what
   we've learned? If no changes needed, write a single line:
-  `plan_still_valid: true` to .claude/harness/plan-review-{N}.md and
+  `plan_still_valid: true` to .harness/plan-review-{N}.md and
   exit. If changes needed, propose a revised plan and list the diffs."
 })
 ```
@@ -696,8 +696,8 @@ When the user invokes `archive phase-harness` (or the harness completes
 successfully and the user starts a new feature), the Dispatcher moves:
 
 ```
-.claude/harness/*  (except archive/)
-  → .claude/harness/archive/{YYYY-MM-DD}-{feature-slug}/
+.harness/*  (except archive/)
+  → .harness/archive/{YYYY-MM-DD}-{feature-slug}/
 ```
 
 The archive preserves the full history (phase-plan, patterns, all
@@ -708,7 +708,7 @@ phase-{N}/ dirs) for future reference.
 ## File Structure
 
 ```
-.claude/harness/
+.harness/
   phase-plan.md                  # Full plan (Operator, Step 1)
   phase-status.json              # Execution state (Dispatcher)
   patterns.md                    # Accumulated Codebase Patterns
@@ -775,7 +775,7 @@ rules into the Operator/Generator/Evaluator prompts for consistency.
 4. Execution begins. Use `status phase-harness` any time for a progress
    summary. Use `pause phase-harness` to stop before the next phase.
 5. On completion, review the final build/test report. Run
-   `archive phase-harness` to stash the run under `.claude/harness/archive/`.
+   `archive phase-harness` to stash the run under `.harness/archive/`.
 
 ## Example phase-plan.md
 
